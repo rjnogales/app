@@ -23,20 +23,6 @@ httpServer.listen(config.httpPort,function(){
   console.log('The HTTP server is running on port '+config.httpPort);
 });
 
-// Instantiate the HTTPS server
-var httpsServerOptions = {
-  'key': fs.readFileSync('./https/key.pem'),
-  'cert': fs.readFileSync('./https/cert.pem')
-};
-var httpsServer = https.createServer(httpsServerOptions,function(req,res){
-  unifiedServer(req,res);
-});
-
-// Start the HTTPS server
-httpsServer.listen(config.httpsPort,function(){
- console.log('The HTTPS server is running on port '+config.httpsPort);
-});
-
 // All the server logic for both the http and https server
 var unifiedServer = function(req,res){
 
@@ -104,3 +90,16 @@ var router = {
   'ping' : handlers.ping,
   'users' : handlers.users
 };
+
+/*
+POST:localhost:3000/stock : agrega el simbolo a la lista de monitoreo, esta en el body el simbolo a agregar 
+DEL:localhost:3000/stock/<symbol> : borra el simbolo a la lista de monitoreo localhost:3000/stock/AAPL
+GET:localhost:3000/stock/<symbol> : trae un solo simbolo a la lista de monitoreo EG: localhost:3000/stock/AAPL
+GET:localhost:3000/stock/<symbol>?update : trae un solo simbolo a la lista de monitoreo pero actualizando el valor usando iexcloud EG: localhost:3000/stock/AAPL?update
+GET:localhost:3000/stock : trae todos los simbolos de la lista de monitoreo EG: localhost:3000/stock
+GET:localhost:3000/stock/?update ...: trae todos los simbolos de la lista de monitoreo EG: localhost:3000/stock/?update
+
+Las consultas GET deberian soportar el query param ?update para que al estar incluido actualice los valores usando iexcloud
+
+
+*/
