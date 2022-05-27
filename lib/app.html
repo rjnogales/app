@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    #main-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        width: 33%;
+        height: auto;
+        min-height: 10px;
+        /* border: 2px;
+        border-style: solid; */
+        position: absolute;
+        gap: 20px;
+        left: 33%;
+    }
+
+    .stock-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        width: 100%;
+        border: 2px;
+        border-color: greenyellow;
+        border-radius: 15px;
+        border-style: solid;
+    }
+
+    img {
+        width: 150px;
+    }
+</style>
+<script type="text/javascript">
+    
+    async function main () {
+        app.mainContainer = document.getElementById('main-container');
+        console.log(app.mainContainer);
+        app.symbolInput = document.getElementById('symbolName');
+        app.symbolInput.addEventListener("keypress", function(event) {
+            // If the user presses the "Enter" key on the keyboard
+            if (event.key === "Enter") {
+                // Cancel the default action, if needed
+                event.preventDefault();
+                // Trigger the button element with a click
+                document.getElementById("addSymbolButton").click();
+            }
+        });
+        await getAllStocks();
+        drawStocks();
+    }
+
+    function drawStocks() {
+        // Cleaning main container
+        while (app.mainContainer.lastChild && app.mainContainer.lastChild.id !== 'addContainer') {
+            console.log('Removing', app.mainContainer.lastChild);
+            app.mainContainer.lastChild.remove();
+        }
+        Object.keys(app.currentStocks).forEach(function (symbol) {
+            console.log('Drawing symbol', symbol)
+            let stockElement = app.currentStocks[symbol]['DOMelement'];
+            app.mainContainer.appendChild(stockElement);
+        });
+    }
+
+    async function submitNewSymbol() {
+        console.log('Submitting new symbol');
+        let symbolToSubmit = app.symbolInput.value.trim();
+        let data = {
+            symbol: symbolToSubmit
+        }
+        return fetch(`/stocks`, {method: 'POST', body: JSON.stringify(data)})
+        .then(function (response) {
+            if(!response.ok) throw new Error('error getting symbol');
+            else return response;
+        })
+        .then(response => response.json())
+        .then(function (newStock) {
+            app.currentStocks[symbolToSubmit] = newStock;
+            app.currentStocks[symbolToSubmit]['DOMelement'] = createElementFromStock(symbolToSubmit, newStock)
+            drawStocks();
+        });
+    }
+
+    async function deleteSymbol(symbol) {
+        console.log('Deleting symbol');
+        return fetch(`/stocks/${symbol}`, {method: 'DELETE'})
+        .then(function (response) {
+            if(!response.ok) throw new Error('error deleting symbol');
+            else return response;
+        })
+        .then(response => response.json())
+        .then(function () {
+            delete app.currentStocks[symbol];
+            console.log('After deleting', symbol, app.currentStocks)
+            drawStocks();
+        })
+    }
+
+    async function updateSymbol(symbol) {
+        console.log('Updating symbol');
+        return fetch(`/stocks/${symbol}?update`)
+        .then(function (response) {
+            if(!response.ok) throw new Error('error deleting symbol');
+            else return response;
+        })
+        .then(response => response.json())
+        .then(function (updatedStock) {
+            app.currentStocks[symbol] = updatedStock;
+            app.currentStocks[symbol]['DOMelement'] = createElementFromStock(symbol, updatedStock);
+            drawStocks();
+        })
+    }
+
+    async function getAllStocks() {
+        return fetch('/stocks')
+        .then(response => response.json())
+        .then(function (allSymbols) {
+            console.log('Got all symbols', allSymbols);
+            app.currentStocks = allSymbols;
+            Object.keys(app.currentStocks).forEach(function (symbol) {
+                app.currentStocks[symbol]['DOMelement'] = createElementFromStock(symbol, app.currentStocks[symbol])
+            });
+        });
+    }
+
+    function createElementFromStock (newSymbol, newStock) {
+        // Stock container
+        let newSymbolContainer = document.createElement('div');
+        newSymbolContainer.classList.add('stock-container');
+
+        // Stock logo
+        let newSymbolLogo = document.createElement('img');
+        newSymbolLogo.src = newStock.logoURL;
+        newSymbolContainer.appendChild(newSymbolLogo);
+
+        // Company name
+        let newSymbolCompanyName = document.createElement('span');
+        newSymbolCompanyName.appendChild(document.createTextNode(newStock.companyName));
+        newSymbolContainer.appendChild(newSymbolCompanyName);
+
+        // Current Price
+        let newSymbolPrice = document.createElement('span');
+        newSymbolPrice.appendChild(document.createTextNode(newStock.price));
+        newSymbolContainer.appendChild(newSymbolPrice);
+
+        // Update element
+        let newSymbolUpdateBtn = document.createElement('button');
+        newSymbolUpdateBtn.appendChild(document.createTextNode('Update'));
+        newSymbolUpdateBtn.addEventListener('click', function () {
+            updateSymbol(newSymbol);
+        });
+        newSymbolContainer.appendChild(newSymbolUpdateBtn);
+
+
+        // Delete element
+
+        let newSymbolDeleteBtn = document.createElement('button');
+        newSymbolDeleteBtn.appendChild(document.createTextNode('Delete'));
+        newSymbolDeleteBtn.addEventListener('click', function () {
+            deleteSymbol(newSymbol);
+        })
+        newSymbolContainer.appendChild(newSymbolDeleteBtn);
+
+        return newSymbolContainer;
+
+    }
+
+    const app = {
+        currentStocks: {},
+        mainContainer: undefined,
+        symbolInput: undefined,
+        main: main,
+    }
+
+    window.onload = app.main;
+</script>
+</head>
+<body>
+    <div id="main-container">
+        <div id="addContainer">
+            <label for="symbolName">Add a new symbol:</label>
+            <input type="text" id="symbolName" name="symbolName">
+            <button id="addSymbolButton" onclick="submitNewSymbol()">Submit</button>
+        </div>
+    </div>
+</body>
+</html>
